@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Crypto Dashboard</title>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;700;800&display=swap" rel="stylesheet"/>
+  <style>
+    :root {
+      --bg:        #080b10;
+      --surface:   #0d1117;
+      --border:    #1e2730;
+      --btc:       #f7931a;
+      --eth:       #627eea;
+      --green:     #00e676;
+      --red:       #ff1744;
+      --muted:     #4a5568;
+      --text:      #e2e8f0;
+      --subtext:   #718096;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Space Mono', monospace;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* Background grid */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(255,255,255,.02) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,.02) 1px, transparent 1px);
+      background-size: 40px 40px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .wrapper {
+      position: relative;
+      z-index: 1;
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 2rem 1.5rem;
+    }
+
+    /* HEADER */
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 2.5rem;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 1.25rem;
+    }
+
+    .logo {
+      font-family: 'Syne', sans-serif;
+      font-weight: 800;
+      font-size: 1.4rem;
+      letter-spacing: -0.02em;
+      color: #fff;
+    }
+    .logo span { color: var(--btc); }
+
+    .status {
+      display: flex;
+      align-items: center;
+      gap: .5rem;
+      font-size: .72rem;
+      color: var(--subtext);
+    }
+    .dot {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: var(--muted);
+      transition: background .4s;
+    }
+    .dot.live { background: var(--green); box-shadow: 0 0 6px var(--green); }
+    .dot.error { background: var(--red); }
+
+    /* CARDS GRID */
+    .cards {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.25rem;
+      margin-bottom: 1.25rem;
+    }
+    @media (max-width: 640px) { .cards { grid-template-columns: 1fr; } }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.5rem;
+      position: relative;
+      overflow: hidden;
+      transition: border-color .3s, transform .2s;
+    }
+    .card:hover { transform: translateY(-2px); }
+    .card.btc { border-top: 3px solid var(--btc); }
+    .card.eth { border-top: 3px solid var(--eth); }
+
+    /* Glow accent */
+    .card.btc::before {
+      content: '';
+      position: absolute;
+      top: -60px; right: -60px;
+      width: 160px; height: 160px;
+      background: radial-gradient(circle, rgba(247,147,26,.12), transparent 70%);
+      pointer-events: none;
+    }
+    .card.eth::before {
+      content: '';
+      position: absolute;
+      top: -60px; right: -60px;
+      width: 160px; height: 160px;
+      background: radial-gradient(circle, rgba(98,126,234,.12), transparent 70%);
+      pointer-events: none;
+    }
+
+    .card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 1.25rem;
+    }
+
+    .coin-label {
+      display: flex;
+      align-items: center;
+      gap: .6rem;
+    }
+    .coin-icon {
+      width: 36px; height: 36px;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1rem;
+      font-weight: 700;
+    }
+    .btc .coin-icon { background: rgba(247,147,26,.15); color: var(--btc); }
+    .eth .coin-icon { background: rgba(98,126,234,.15); color: var(--eth); }
+
+    .coin-name {
+      font-family: 'Syne', sans-serif;
+      font-weight: 700;
+      font-size: 1rem;
+      color: #fff;
+    }
+    .coin-full { font-size: .7rem; color: var(--subtext); margin-top: 1px; }
+
+    .badge {
+      font-size: .68rem;
+      padding: .25rem .6rem;
+      border-radius: 4px;
+      font-weight: 700;
+      letter-spacing: .04em;
+    }
+    .badge.up   { background: rgba(0,230,118,.1); color: var(--green); }
+    .badge.down { background: rgba(255,23,68,.1);  color: var(--red); }
+
+    .price-usd {
+      font-family: 'Syne', sans-serif;
+      font-weight: 800;
+      font-size: 2rem;
+      color: #fff;
+      letter-spacing: -.03em;
+      line-height: 1;
+      margin-bottom: .35rem;
+    }
+    .price-brl {
+      font-size: .8rem;
+      color: var(--subtext);
+      margin-bottom: 1.25rem;
+    }
+
+    /* Sparkline */
+    .spark-wrap {
+      margin-bottom: 1.25rem;
+    }
+    .spark-label {
+      font-size: .65rem;
+      color: var(--subtext);
+      margin-bottom: .4rem;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+    }
+    canvas.spark {
+      width: 100%;
+      height: 50px;
+      display: block;
+    }
+
+    /* Métricas */
+    .metrics {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: .6rem;
+    }
+    .metric {
+      background: rgba(255,255,255,.03);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: .6rem .8rem;
+    }
+    .metric-label {
+      font-size: .62rem;
+      color: var(--subtext);
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      margin-bottom: .2rem;
+    }
+    .metric-value {
+      font-size: .85rem;
+      color: var(--text);
+      font-weight: 700;
+    }
+
+    /* TABELA COMPARATIVA */
+    .compare {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.25rem 1.5rem;
+      margin-bottom: 1.25rem;
+    }
+    .compare-title {
+      font-family: 'Syne', sans-serif;
+      font-size: .8rem;
+      font-weight: 700;
+      color: var(--subtext);
+      text-transform: uppercase;
+      letter-spacing: .1em;
+      margin-bottom: 1rem;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: .8rem;
+    }
+    th {
+      text-align: left;
+      color: var(--subtext);
+      font-size: .65rem;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      padding: .4rem .6rem;
+      border-bottom: 1px solid var(--border);
+    }
+    td {
+      padding: .6rem .6rem;
+      border-bottom: 1px solid rgba(255,255,255,.03);
+    }
+    tr:last-child td { border-bottom: none; }
+    .up   { color: var(--green); }
+    .down { color: var(--red); }
+
+    /* FOOTER */
+    footer {
+      text-align: center;
+      font-size: .65rem;
+      color: var(--muted);
+      padding-top: 1rem;
+      border-top: 1px solid var(--border);
+    }
+    footer a { color: var(--muted); }
+
+    /* Skeleton loader */
+    .skeleton {
+      background: linear-gradient(90deg, var(--border) 25%, #1e2d3d 50%, var(--border) 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.4s infinite;
+      border-radius: 4px;
+      display: inline-block;
+    }
+    @keyframes shimmer {
+      0%   { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+
+    /* Pulse on update */
+    @keyframes pulse-update {
+      0%   { opacity: 1; }
+      50%  { opacity: .4; }
+      100% { opacity: 1; }
+    }
+    .updating { animation: pulse-update .6s ease; }
+  </style>
+</head>
+<body>
+<div class="wrapper">
+
+  <header>
+    <div class="logo">CRYPTO<span>.</span>DASH</div>
+    <div class="status">
+      <div class="dot" id="dot"></div>
+      <span id="status-text">conectando...</span>
+    </div>
+  </header>
+
+  <div class="cards">
+    <!-- BTC -->
+    <div class="card btc">
+      <div class="card-header">
+        <div class="coin-label">
+          <div class="coin-icon">₿</div>
+          <div>
+            <div class="coin-name">BTC</div>
+            <div class="coin-full">Bitcoin</div>
+          </div>
+        </div>
+        <div class="badge" id="btc-badge">—</div>
+      </div>
+      <div class="price-usd" id="btc-usd">—</div>
+      <div class="price-brl" id="btc-brl">—</div>
+      <div class="spark-wrap">
+        <div class="spark-label">7 dias</div>
+        <canvas class="spark" id="btc-spark"></canvas>
+      </div>
+      <div class="metrics">
+        <div class="metric">
+          <div class="metric-label">Volume 24h</div>
+          <div class="metric-value" id="btc-vol">—</div>
+        </div>
+        <div class="metric">
+          <div class="metric-label">Market Cap</div>
+          <div class="metric-value" id="btc-cap">—</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ETH -->
+    <div class="card eth">
+      <div class="card-header">
+        <div class="coin-label">
+          <div class="coin-icon">Ξ</div>
+          <div>
+            <div class="coin-name">ETH</div>
+            <div class="coin-full">Ethereum</div>
+          </div>
+        </div>
+        <div class="badge" id="eth-badge">—</div>
+      </div>
+      <div class="price-usd" id="eth-usd">—</div>
+      <div class="price-brl" id="eth-brl">—</div>
+      <div class="spark-wrap">
+        <div class="spark-label">7 dias</div>
+        <canvas class="spark" id="eth-spark"></canvas>
+      </div>
+      <div class="metrics">
+        <div class="metric">
+          <div class="metric-label">Volume 24h</div>
+          <div class="metric-value" id="eth-vol">—</div>
+        </div>
+        <div class="metric">
+          <div class="metric-label">Market Cap</div>
+          <div class="metric-value" id="eth-cap">—</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tabela comparativa -->
+  <div class="compare">
+    <div class="compare-title">Comparativo</div>
+    <table>
+      <thead>
+        <tr>
+          <th>Moeda</th>
+          <th>USD</th>
+          <th>BRL</th>
+          <th>24h</th>
+          <th>Volume</th>
+          <th>Mkt Cap</th>
+        </tr>
+      </thead>
+      <tbody id="table-body">
+        <tr><td colspan="6" style="color:var(--subtext);text-align:center">carregando...</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <footer>
+    Dados via <a href="https://coingecko.com" target="_blank">CoinGecko API</a> &nbsp;·&nbsp;
+    atualiza a cada 30s &nbsp;·&nbsp;
+    <span id="last-update">—</span>
+  </footer>
+
+</div>
+
+<script>
+const REFRESH = 30_000;
+
+// ── Formatadores ──────────────────────────────────────────
+function fmtUSD(v) {
+  if (v >= 1e12) return `$${(v/1e12).toFixed(2)}T`;
+  if (v >= 1e9)  return `$${(v/1e9).toFixed(2)}B`;
+  if (v >= 1e6)  return `$${(v/1e6).toFixed(2)}M`;
+  return `$${v.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2})}`;
+}
+function fmtBRL(v) {
+  return `R$ ${v.toLocaleString('pt-BR', {minimumFractionDigits:2})}`;
+}
+function fmtChange(v) {
+  const sign = v >= 0 ? '▲' : '▼';
+  return `${sign} ${Math.abs(v).toFixed(2)}%`;
+}
+
+// ── Sparkline canvas ──────────────────────────────────────
+function drawSpark(canvasId, prices, color) {
+  const canvas = document.getElementById(canvasId);
+  const dpr = window.devicePixelRatio || 1;
+  const rect = canvas.getBoundingClientRect();
+  canvas.width  = rect.width  * dpr;
+  canvas.height = rect.height * dpr;
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+  const W = rect.width, H = rect.height;
+
+  if (!prices || prices.length < 2) return;
+  const mn = Math.min(...prices), mx = Math.max(...prices);
+  const range = mx - mn || 1;
+  const pts = prices.map((p, i) => ({
+    x: (i / (prices.length - 1)) * W,
+    y: H - ((p - mn) / range) * (H * .8) - H * .1
+  }));
+
+  // Fill gradient
+  const grad = ctx.createLinearGradient(0, 0, 0, H);
+  grad.addColorStop(0, color + '33');
+  grad.addColorStop(1, color + '00');
+  ctx.beginPath();
+  ctx.moveTo(pts[0].x, pts[0].y);
+  pts.slice(1).forEach(p => ctx.lineTo(p.x, p.y));
+  ctx.lineTo(W, H); ctx.lineTo(0, H); ctx.closePath();
+  ctx.fillStyle = grad;
+  ctx.fill();
+
+  // Line
+  ctx.beginPath();
+  ctx.moveTo(pts[0].x, pts[0].y);
+  pts.slice(1).forEach(p => ctx.lineTo(p.x, p.y));
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 2;
+  ctx.lineJoin = 'round';
+  ctx.stroke();
+
+  // Last dot
+  const last = pts[pts.length - 1];
+  ctx.beginPath();
+  ctx.arc(last.x, last.y, 3.5, 0, Math.PI * 2);
+  ctx.fillStyle = color;
+  ctx.fill();
+}
+
+// ── Atualizar UI ──────────────────────────────────────────
+function setStatus(ok) {
+  const dot  = document.getElementById('dot');
+  const txt  = document.getElementById('status-text');
+  dot.className = 'dot ' + (ok ? 'live' : 'error');
+  txt.textContent = ok ? 'ao vivo' : 'erro de conexão';
+}
+
+function updateCard(coin, symbol, data) {
+  const change = data[`${coin}_24h_change`] ?? data.usd_24h_change;
+  const isUp   = change >= 0;
+  const color  = coin === 'bitcoin' ? '#f7931a' : '#627eea';
+
+  document.getElementById(`${symbol}-usd`).textContent  = fmtUSD(data.usd);
+  document.getElementById(`${symbol}-brl`).textContent  = fmtBRL(data.brl);
+  document.getElementById(`${symbol}-vol`).textContent  = fmtUSD(data.usd_24h_vol);
+  document.getElementById(`${symbol}-cap`).textContent  = fmtUSD(data.usd_market_cap);
+
+  const badge = document.getElementById(`${symbol}-badge`);
+  badge.textContent  = fmtChange(change);
+  badge.className    = 'badge ' + (isUp ? 'up' : 'down');
+
+  // pulse
+  const card = badge.closest('.card');
+  card.classList.remove('updating');
+  void card.offsetWidth;
+  card.classList.add('updating');
+}
+
+function updateTable(prices) {
+  const coins = [
+    { id: 'bitcoin',  symbol: 'BTC', icon: '₿', cls: 'btc' },
+    { id: 'ethereum', symbol: 'ETH', icon: 'Ξ', cls: 'eth' },
+  ];
+  const body = document.getElementById('table-body');
+  body.innerHTML = coins.map(c => {
+    const d = prices[c.id];
+    const chg = d.usd_24h_change;
+    const cls = chg >= 0 ? 'up' : 'down';
+    return `<tr>
+      <td><span style="color:var(--${c.cls})">${c.icon} ${c.symbol}</span></td>
+      <td>${fmtUSD(d.usd)}</td>
+      <td>${fmtBRL(d.brl)}</td>
+      <td class="${cls}">${fmtChange(chg)}</td>
+      <td>${fmtUSD(d.usd_24h_vol)}</td>
+      <td>${fmtUSD(d.usd_market_cap)}</td>
+    </tr>`;
+  }).join('');
+}
+
+// ── Fetch dados ───────────────────────────────────────────
+async function fetchPrices() {
+  const res  = await fetch('/api/prices');
+  const json = await res.json();
+  if (!json.ok) throw new Error(json.error);
+  return json.data;
+}
+
+async function fetchHistory(coinId) {
+  const res  = await fetch(`/api/history/${coinId}`);
+  const json = await res.json();
+  return json.ok ? json.prices : null;
+}
+
+// ── Loop principal ────────────────────────────────────────
+let histories = { bitcoin: null, ethereum: null };
+
+async function loadHistories() {
+  const [btc, eth] = await Promise.all([
+    fetchHistory('bitcoin'),
+    fetchHistory('ethereum'),
+  ]);
+  histories.bitcoin  = btc;
+  histories.ethereum = eth;
+  drawSpark('btc-spark', btc, '#f7931a');
+  drawSpark('eth-spark', eth, '#627eea');
+}
+
+async function refresh() {
+  try {
+    const prices = await fetchPrices();
+    updateCard('bitcoin',  'btc', prices.bitcoin);
+    updateCard('ethereum', 'eth', prices.ethereum);
+    updateTable(prices);
+    setStatus(true);
+    const now = new Date().toLocaleTimeString('pt-BR');
+    document.getElementById('last-update').textContent = `atualizado às ${now}`;
+  } catch (e) {
+    setStatus(false);
+  }
+}
+
+async function init() {
+  await Promise.all([refresh(), loadHistories()]);
+  setInterval(refresh, REFRESH);
+  // Redesenha sparklines se janela redimensionar
+  window.addEventListener('resize', () => {
+    drawSpark('btc-spark', histories.bitcoin,  '#f7931a');
+    drawSpark('eth-spark', histories.ethereum, '#627eea');
+  });
+}
+
+init();
+</script>
+</body>
+</html>

@@ -1,0 +1,16 @@
+[project]
+name = "crypto-dashboard"
+version = "1.0.0"
+description = "BTC & ETH terminal dashboard"
+requires-python = ">=3.10"
+dependencies = [
+    "rich>=13.0.0",
+    "requests>=2.28.0",
+]
+
+[project.scripts]
+crypto-dashboard = "crypto_dashboard.dashboard:run"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
